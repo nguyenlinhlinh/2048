@@ -16,6 +16,7 @@ type Tile = {
 type State = {
   placedTiles: number,
   board: Tile[][],
+  nextLevel: number
 };
 
 class Game extends Component<GameProps, State> {
@@ -32,12 +33,12 @@ class Game extends Component<GameProps, State> {
     512: { background: '#EDC850', color: '#f9f6f2' },
     1024: { background: '#EDC53F', color: '#f9f6f2' },
     2048: { background: '#EDC22E', color: '#f9f6f2' },
-    // 4096: { background: '#3E3933', color: '#f9f6f2' },
-    // 8192: { background: '#F47C7C', color: '#f9f6f2' },
-    // 16384: { background: '#4C5B61', color: '#f9f6f2' },
-    // 32768: { background: '#9772FB', color: '#f9f6f2' },
-    // 65536: { background: '#E9EFC0', color: '#f9f6f2' },
-    // 131072: { background: '#0AA1DD', color: '#f9f6f2' },
+    4096: { background: '#3E3933', color: '#f9f6f2' },
+    8192: { background: '#F47C7C', color: '#f9f6f2' },
+    16384: { background: '#4C5B61', color: '#f9f6f2' },
+    32768: { background: '#9772FB', color: '#f9f6f2' },
+    65536: { background: '#E9EFC0', color: '#f9f6f2' },
+    131072: { background: '#0AA1DD', color: '#f9f6f2' },
   }
   private startValues = [2, 4];
   private N = 4;
@@ -53,7 +54,8 @@ class Game extends Component<GameProps, State> {
     super(props);
     this.initState = {
       placedTiles: 0,
-      board: this.createInitBoard()
+      board: this.createInitBoard(),
+      nextLevel: 32
     };
     this.state = this.initState;
 
@@ -62,10 +64,7 @@ class Game extends Component<GameProps, State> {
     const m: Tile[][] = Array.from({ length: this.N }).map(() => Array.from<Tile>({ length: this.N }));
     for (let x = 0; x < this.N; x++) {
       for (let y = 0; y < this.N; y++) {
-        m[x][y] = {
-          ...this.emptyTile,
-          fromPos: { x, y }
-        }
+        m[x][y] = this.emptyTile
       }
     }
     return m;
@@ -105,7 +104,7 @@ class Game extends Component<GameProps, State> {
         };
         tiles++;
       }
-      const result = { board: newBoard, placedTiles: tiles };
+      const result = { ...prevState, board: newBoard, placedTiles: tiles };
       return result;
     });
   }
@@ -119,44 +118,6 @@ class Game extends Component<GameProps, State> {
     return newMatrix;
   }
 
-  horizontalSlide = (board: Tile[][], placedTiles: number) => {
-    const n = this.N;
-    let newBoard = this.copyBoard(board);
-    let tiles = placedTiles;
-    const mergedTiles: Point[] = [];
-    newBoard = newBoard.map((row, rowIdx) => {
-      const filtered = row.filter(e => e.value !== 0);
-      if (filtered.length === 0) {
-        return row;
-      }
-      const newRow = Array.from<Tile>({ length: n }).fill(this.emptyTile);
-      if (filtered.length === 1) {
-        newRow[0] = filtered[0];
-        return newRow;
-      }
-      let idx = 0;
-      newRow[0] = filtered[0];
-      for (let i = 1; i < filtered.length; i++) {
-        const val = filtered[i].value;
-        if (val === newRow[idx].value) {
-          newRow[idx] = {
-            ...newRow[idx],
-            value: newRow[idx].value + val,
-            merged: true,
-          };
-          tiles--;
-          idx++;
-          continue;
-        }
-        if (newRow[idx].value !== 0) {
-          idx++;
-        }
-        newRow[idx] = filtered[i];
-      }
-      return newRow;
-    });
-    return { board: newBoard, placedTiles: tiles };
-  }
   calculateMovingCoordinates = (from: Point | null, to: Point): Point => {
     const cellWidth = 106.25;
     const cellPadding = 15;
@@ -182,57 +143,95 @@ class Game extends Component<GameProps, State> {
         const tile = newBoard[x][y];
         tile.newTile = false;
         tile.merged = false;
-        tile.fromPos = { x, y };
+        tile.fromPos = tile.value === 0 ? null : { x, y };
       }
     }
     return newBoard;
   }
 
+  swipeLeft = (board: Tile[][], placedTiles: number) => {
+    const n = this.N;
+    let tiles = placedTiles;
+    const newBoard = this.copyBoard(board).map((row, x) => {
+      const n = row.length;
+      let count = 0;
+      for (let y = 1; y < n; y++) {
+        if (row[y].value !== 0) {
+          if (row[count].value != 0) {
+            if (row[count].value === row[y].value) {
+              row[count] = {
+                newTile: false,
+                value: row[y].value * 2,
+                merged: true,
+                fromPos: { x, y: y }
+              }
+              tiles--;
+              count++;
+              row[y] = this.emptyTile;
+            } else {
+              count++;
+              row[count] = { ...row[y] };
+              if (count !== y) {
+                row[y] = this.emptyTile;
+              }
+            }
+          } else {
+            row[count] = { ...row[y] };
+            row[y] = this.emptyTile;
+          }
+        }
+      }
+      for (let i = count + 1; i < n; i++) {
+        row[i].value = 0;
+      }
+      return row;
+    });
+    return { board: newBoard, placedTiles: tiles };
+  }
+  swipeRight = (board: Tile[][], placedTiles: number) => {
+    const swipedLeft = this.swipeLeft(board, placedTiles);
+    console.log(swipedLeft);
+    const newBoard = swipedLeft.board.map(row => {
+      let count = row.length - 1;
+      for (let i = row.length - 1; i >= 0; i--) {
+        if (row[i].value !== 0) {
+          row[count--] = row[i];
+        }
+      }
+      for (let i = count; i >= 0; i--) {
+        row[i] = this.emptyTile;
+      }
+      return row;
+    });
+    return { board: newBoard, placedTiles: swipedLeft.placedTiles };
+  }
   handleKeyPress = (event: any) => {
     let newState = true;
+    const events = ["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"];
+    if (!events.includes(event.key)) return;
     this.setState((prevState) => {
       const { board, placedTiles } = prevState;
       const clearedBoard = this.clearAnimationProperties(board);
       switch (event.key) {
+        case "ArrowLeft": {
+          const result = this.swipeLeft(board, placedTiles);
+          return { ...prevState, board: result.board, placedTiles: result.placedTiles };
+        }
+        case "ArrowRight":
+          const result = this.swipeRight(board, placedTiles);
+          return { ...prevState, board: result.board, placedTiles: result.placedTiles }
         case "ArrowUp": {
           const transposedBoard = this.transposeMatrix(clearedBoard);
-          const result = this.horizontalSlide(transposedBoard, placedTiles);
+          const result = this.swipeLeft(transposedBoard, placedTiles);
           const newBoard = this.transposeMatrix(result.board);
-          return { board: newBoard, placedTiles: result.placedTiles };
+          return { ...prevState, board: newBoard, placedTiles: result.placedTiles };
         }
         case "ArrowDown": {
           const transposedBoard = this.transposeMatrix(clearedBoard);
-          const result = this.horizontalSlide(transposedBoard, placedTiles);
-          const newBoard = result.board.map(row => {
-            const newRow = Array.from<Tile>({ length: this.N }).fill(this.emptyTile);
-            let j = row.length - 1;
-            for (let i = row.length - 1; i >= 0; i--) {
-              if (row[i].value !== 0) {
-                newRow[j] = row[i];
-                j--;
-              }
-            }
-            return newRow;
-          });
-          const transposedNewBoard = this.transposeMatrix(newBoard);
-          return { board: transposedNewBoard, placedTiles: result.placedTiles };
+          const result = this.swipeRight(transposedBoard, placedTiles);
+          const transposedNewBoard = this.transposeMatrix(result.board);
+          return { ...prevState, board: transposedNewBoard, placedTiles: result.placedTiles };
         }
-        case "ArrowLeft":
-          return this.horizontalSlide(board, placedTiles);
-        case "ArrowRight":
-          const result = this.horizontalSlide(clearedBoard, placedTiles);
-          const newBoard = result.board.map(row => {
-            const newRow = Array.from<Tile>({ length: this.N }).fill(this.emptyTile);
-            let j = row.length - 1;
-            for (let i = row.length - 1; i >= 0; i--) {
-              if (row[i].value !== 0) {
-                newRow[j] = row[i];
-                j--;
-              }
-            }
-            return newRow;
-          });
-          return { board: newBoard, placedTiles: result.placedTiles };
         default:
           newState = false;
           return prevState;

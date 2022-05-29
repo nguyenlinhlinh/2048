@@ -9,7 +9,7 @@
   font-size: 55px;
   font-weight: bold;
   border-radius: 6px;
-  animation: slide 3s forwards;
+  animation: slide 300ms forwards;
 }
 
 .new-tile {
@@ -58,6 +58,7 @@
 .merged-tile {
   animation-name: pop;
   animation-duration: 1s;
+  animation-delay: 300ms;
 }
 
 @keyframes pop {
