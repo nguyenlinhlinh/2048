@@ -160,16 +160,17 @@ class Game extends Component<GameProps, State> {
   calculateMovingCoordinates = (from: Point | null, to: Point): Point => {
     const cellWidth = 106.25;
     const cellPadding = 15;
+    const step = cellWidth + cellPadding;
     let x = 0;
     let y = 0;
     if (!from) {
       return { x, y }
     }
     if (from.x === to.x) {
-      x = (to.y - from.y) * (cellWidth + cellPadding);
+      x = (from.y - to.y) * step;
     }
     if (from.y === to.y) {
-      y = (to.x - from.x) * (cellWidth + cellPadding);
+      y = (from.x - to.x) * step;
     }
     return { x, y };
   }
@@ -273,9 +274,10 @@ class Game extends Component<GameProps, State> {
                 this.state.board.map((arr: Tile[], x: number) => {
                   return arr.map((tile: Tile, y: number) => {
                     const { color, background } = this.colorPalette[tile.value];
+                    const point = this.calculateMovingCoordinates(tile.fromPos, { x, y });
                     return (
                       <div key={nextId()} className='grid-cell'>
-                        <Tile newTile={tile.newTile} mergedTile={tile.merged} textColor={color} background={background}>
+                        <Tile newTile={tile.newTile} mergedTile={tile.merged} textColor={color} background={background} transform={point}>
                           {tile.value ? String(tile.value) : null}
                         </Tile>
                       </div>

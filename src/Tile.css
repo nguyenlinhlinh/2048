@@ -1,4 +1,6 @@
 .tile {
+  --x-from: 0px;
+  --y-from: 0px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -7,8 +9,7 @@
   font-size: 55px;
   font-weight: bold;
   border-radius: 6px;
-  transition: transform 3s ease-in-out;
-  transition-property: transform;
+  animation: slide 3s forwards;
 }
 
 .new-tile {
@@ -79,5 +80,15 @@
     -moz-transform: scale(1);
     -ms-transform: scale(1);
     transform: scale(1);
+  }
+}
+
+@keyframes slide {
+  from {
+    transform: translate(var(--x-from), var(--y-from));
+  }
+
+  to {
+    transform: translate(0px, 0px);
   }
 }
