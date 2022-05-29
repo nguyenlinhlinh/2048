@@ -97,8 +97,7 @@ class Game extends Component<GameProps, State> {
       if (tiles >= this.N * 4 && !prevState.message && this.isGameOver(newBoard)) {
         message = this.gameOverMessage;
       }
-      const result = { ...prevState, board: newBoard, placedTiles: tiles, message };
-      return result;
+      return { ...prevState, board: newBoard, placedTiles: tiles, message };
     });
   }
   isGameOver = (board: Tile[][]) => {
@@ -128,7 +127,7 @@ class Game extends Component<GameProps, State> {
     return newMatrix;
   }
 
-  calculateMovingCoordinates = (from: Point | null, to: Point): Point => {
+  calculateMovingPixels = (from: Point | null, to: Point): Point => {
     const cellWidth = 106.25;
     const cellPadding = 15;
     const step = cellWidth + cellPadding;
@@ -159,9 +158,12 @@ class Game extends Component<GameProps, State> {
     return newBoard;
   }
   checkScore = (score: number, nextLevel: number): Message | null => {
-    console.log("score", score, nextLevel);
     if (score === MAX_LEVEL) {
-      return { onClick: this.restartGame, messageText: "You won!", buttonLabel: "Try again" };
+      return {
+        onClick: this.restartGame,
+        messageText: "You won!",
+        buttonLabel: "Try again"
+      };
     }
     if (score >= nextLevel) {
       return {
@@ -185,30 +187,29 @@ class Game extends Component<GameProps, State> {
       const n = row.length;
       let count = 0;
       for (let y = 1; y < n; y++) {
-        if (row[y].value !== 0) {
-          if (row[count].value != 0) {
-            if (row[count].value === row[y].value) {
-              row[count] = {
-                newTile: false,
-                value: row[y].value * 2,
-                merged: true,
-                fromPos: { x, y: y }
-              }
-              largestTile = Math.max(largestTile, row[count].value);
-              tiles--;
-              count++;
-              row[y] = this.emptyTile;
-            } else {
-              count++;
-              row[count] = { ...row[y] };
-              if (count !== y) {
-                row[y] = this.emptyTile;
-              }
+        if (row[y].value === 0) continue;
+        if (row[count].value != 0) {
+          if (row[count].value === row[y].value) {
+            row[count] = {
+              newTile: false,
+              value: row[y].value * 2,
+              merged: true,
+              fromPos: row[y].fromPos
             }
-          } else {
-            row[count] = { ...row[y] };
+            largestTile = Math.max(largestTile, row[count].value);
+            tiles--;
+            count++;
             row[y] = this.emptyTile;
+          } else {
+            count++;
+            row[count] = { ...row[y] };
+            if (count !== y) {
+              row[y] = this.emptyTile;
+            }
           }
+        } else {
+          row[count] = { ...row[y] };
+          row[y] = this.emptyTile;
         }
       }
       for (let i = count + 1; i < n; i++) {
@@ -219,19 +220,13 @@ class Game extends Component<GameProps, State> {
     return { board: newBoard, placedTiles: tiles, largestTile };
   }
   swipeRight = (board: Tile[][], placedTiles: number) => {
-    const swipedLeft = this.swipeLeft(board, placedTiles);
-    const newBoard = swipedLeft.board.map(row => {
-      let count = row.length - 1;
-      for (let i = row.length - 1; i >= 0; i--) {
-        if (row[i].value !== 0) {
-          row[count--] = row[i];
-        }
-      }
-      for (let i = count; i >= 0; i--) {
-        row[i] = this.emptyTile;
-      }
-      return row;
-    });
+    const reversedBoard = this.copyBoard(board).map((row) => {
+      return row.reverse();
+    })
+    const swipedLeft = this.swipeLeft(reversedBoard, placedTiles);
+    const newBoard = swipedLeft.board.map((row) => {
+      return row.reverse();
+    })
     return { board: newBoard, placedTiles: swipedLeft.placedTiles, largestTile: swipedLeft.largestTile };
   }
   handleKeyPress = (event: any) => {
@@ -323,7 +318,7 @@ class Game extends Component<GameProps, State> {
                 this.state.board.map((arr: Tile[], x: number) => {
                   return arr.map((tile: Tile, y: number) => {
                     const { color, background } = COLOR_PALETTE[tile.value];
-                    const point = this.calculateMovingCoordinates(tile.fromPos, { x, y });
+                    const point = this.calculateMovingPixels(tile.fromPos, { x, y });
                     return (
                       <div key={nextId()} className='grid-cell'>
                         <Tile newTile={tile.newTile} mergedTile={tile.merged} textColor={color} background={background} transform={point}>
