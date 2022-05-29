@@ -1,3 +1,7 @@
+:root {
+  --cell-width: 106.25px
+}
+
 html, body {
   background: #faf8ef;
   font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;

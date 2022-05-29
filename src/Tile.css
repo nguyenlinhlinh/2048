@@ -4,8 +4,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 106.25px;
-  height: 106.25px;
+  width: var(--cell-width);
+  height: var(--cell-width);
   font-size: 55px;
   font-weight: bold;
   border-radius: 6px;
@@ -13,11 +13,15 @@
 }
 
 .new-tile {
-  animation-name: new-tile;
-  animation-duration: 1s;
+  -webkit-animation: appear 300ms ease 100ms;
+  -moz-animation: appear 300ms ease 100ms;
+  animation: appear 300ms ease 100ms;
+  -webkit-animation-fill-mode: backwards;
+  -moz-animation-fill-mode: backwards;
+  animation-fill-mode: backwards;
 }
 
-@keyframes new-tile {
+@keyframes appear {
   0% {
     opacity: 0;
     -webkit-transform: scale(0);
@@ -35,30 +39,22 @@
   }
 }
 
-.tile-new {
-  -webkit-animation: appear 200ms ease 100ms;
-  -moz-animation: appear 200ms ease 100ms;
-  animation: appear 200ms ease 100ms;
-  -webkit-animation-fill-mode: backwards;
-  -moz-animation-fill-mode: backwards;
-  animation-fill-mode: backwards;
+.tile-text {
+  width: var(--cell-width);
+  height: var(--cell-width);
+  text-align: center;
+  line-height: 106.25px;
 }
 
-.tile-merged {
+.merged-tile {
   z-index: 20;
-  -webkit-animation: pop 200ms ease 100ms;
-  -moz-animation: pop 200ms ease 100ms;
-  animation: pop 200ms ease 100ms;
+  -webkit-animation: pop 200ms ease 300ms;
+  -moz-animation: pop 200ms ease 300ms;
+  animation: pop 200ms ease 300ms;
   animation-fill-mode: none;
   -webkit-animation-fill-mode: backwards;
   -moz-animation-fill-mode: backwards;
   animation-fill-mode: backwards;
-}
-
-.merged-tile {
-  animation-name: pop;
-  animation-duration: 1s;
-  animation-delay: 300ms;
 }
 
 @keyframes pop {

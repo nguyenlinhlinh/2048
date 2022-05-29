@@ -1,4 +1,3 @@
-import React from 'react';
 import { Point } from './Game';
 import './Tile.css';
 type Props = {
@@ -9,7 +8,6 @@ type Props = {
   mergedTile: boolean,
   transform: Point
 };
-
 const Tile = (props: Props) => {
   const { textColor, background, newTile, mergedTile, children, transform } = props;
   const { x, y } = transform;
@@ -19,14 +17,16 @@ const Tile = (props: Props) => {
   }
   return (
     <div
-      className={`tile ${newTile ? "new-tile" : ""} ${mergedTile ? "merged-tile" : ""}`}
+      className={`tile ${newTile ? "new-tile" : ""} `}
       style={{
         color: textColor,
         background: background,
         ...data
       }}
     >
-      {children}
+      <div className={`tile-text ${mergedTile ? "merged-tile" : ""}`}>
+        {children}
+      </div>
     </div>
   );
 };
