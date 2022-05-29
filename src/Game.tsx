@@ -2,6 +2,8 @@ import { Component } from 'react';
 import './Game.css';
 import Tile from './Tile';
 import nextId from 'react-id-generator';
+import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, COLOR_PALETTE, MAX_LEVEL } from './constants';
+import MessageComponent, { Message } from './GameMessage';
 export type Point = {
   x: number;
   y: number;
@@ -16,30 +18,11 @@ type Tile = {
 type State = {
   placedTiles: number,
   board: Tile[][],
-  nextLevel: number
+  nextLevel: number,
+  message: Message | null;
 };
 
 class Game extends Component<GameProps, State> {
-  private colorPalette: { [key: number]: { background: string, color: string } } = {
-    0: { background: 'inherit', color: 'inherit' },
-    2: { background: '#EEE4DA', color: 'inherit' },
-    4: { background: '#EDE0C8', color: 'inherit' },
-    8: { background: '#F2B179', color: '#f9f6f2' },
-    16: { background: '#F59563', color: '#f9f6f2' },
-    32: { background: '#F67C5F', color: '#f9f6f2' },
-    64: { background: '#F65E3B', color: '#f9f6f2' },
-    128: { background: '#EDCF72', color: '#f9f6f2' },
-    256: { background: '#EDCC61', color: '#f9f6f2' },
-    512: { background: '#EDC850', color: '#f9f6f2' },
-    1024: { background: '#EDC53F', color: '#f9f6f2' },
-    2048: { background: '#EDC22E', color: '#f9f6f2' },
-    4096: { background: '#3E3933', color: '#f9f6f2' },
-    8192: { background: '#F47C7C', color: '#f9f6f2' },
-    16384: { background: '#4C5B61', color: '#f9f6f2' },
-    32768: { background: '#9772FB', color: '#f9f6f2' },
-    65536: { background: '#E9EFC0', color: '#f9f6f2' },
-    131072: { background: '#0AA1DD', color: '#f9f6f2' },
-  }
   private startValues = [2, 4];
   private N = 4;
   private emptyTile = {
@@ -48,17 +31,22 @@ class Game extends Component<GameProps, State> {
     merged: false,
     newTile: false
   }
-
+  private gameOverMessage: Message;
   private initState: State;
   constructor(props: any) {
     super(props);
     this.initState = {
       placedTiles: 0,
       board: this.createInitBoard(),
-      nextLevel: 32
+      nextLevel: 32,
+      message: null
     };
     this.state = this.initState;
-
+    this.gameOverMessage = {
+      onClick: this.restartGame,
+      messageText: "Game Over!",
+      buttonLabel: "Try again"
+    }
   }
   createInitBoard = () => {
     const m: Tile[][] = Array.from({ length: this.N }).map(() => Array.from<Tile>({ length: this.N }));
@@ -104,9 +92,31 @@ class Game extends Component<GameProps, State> {
         };
         tiles++;
       }
-      const result = { ...prevState, board: newBoard, placedTiles: tiles };
+      let message = prevState.message;
+      // Win message has higher priority
+      if (tiles >= this.N * 4 && !prevState.message && this.isGameOver(newBoard)) {
+        message = this.gameOverMessage;
+      }
+      const result = { ...prevState, board: newBoard, placedTiles: tiles, message };
       return result;
     });
+  }
+  isGameOver = (board: Tile[][]) => {
+    const n = board.length;
+    for (let x = 0; x < board.length; x++) {
+      for (let y = 0; y < board.length; y++) {
+        const val = board[x][y].value;
+        if (val === 0) {
+          return false;
+        };
+        if (x + 1 < n && board[x + 1][y].value === val) {
+          return false;
+        }
+        if (y + 1 < n && board[x][y + 1].value === val)
+          return false
+      }
+    }
+    return true;
   }
   private transposeMatrix = (m: Tile[][]) => {
     const newMatrix = Array.from({ length: m.length }).map(() => Array.from<Tile>({ length: m.length }));
@@ -148,10 +158,29 @@ class Game extends Component<GameProps, State> {
     }
     return newBoard;
   }
+  checkScore = (score: number, nextLevel: number): Message | null => {
+    console.log("score", score, nextLevel);
+    if (score === MAX_LEVEL) {
+      return { onClick: this.restartGame, messageText: "You won!", buttonLabel: "Try again" };
+    }
+    if (score >= nextLevel) {
+      return {
+        onClick: () => {
+          this.setState((prevState) => {
+            return { ...prevState, message: null, nextLevel: nextLevel * 2 };
+          });
+        },
+        messageText: `New milestone reached! ${nextLevel}`,
+        buttonLabel: "Continue"
+      }
+    }
+    return null;
+  }
 
   swipeLeft = (board: Tile[][], placedTiles: number) => {
     const n = this.N;
     let tiles = placedTiles;
+    let largestTile = 0;
     const newBoard = this.copyBoard(board).map((row, x) => {
       const n = row.length;
       let count = 0;
@@ -165,6 +194,7 @@ class Game extends Component<GameProps, State> {
                 merged: true,
                 fromPos: { x, y: y }
               }
+              largestTile = Math.max(largestTile, row[count].value);
               tiles--;
               count++;
               row[y] = this.emptyTile;
@@ -186,11 +216,10 @@ class Game extends Component<GameProps, State> {
       }
       return row;
     });
-    return { board: newBoard, placedTiles: tiles };
+    return { board: newBoard, placedTiles: tiles, largestTile };
   }
   swipeRight = (board: Tile[][], placedTiles: number) => {
     const swipedLeft = this.swipeLeft(board, placedTiles);
-    console.log(swipedLeft);
     const newBoard = swipedLeft.board.map(row => {
       let count = row.length - 1;
       for (let i = row.length - 1; i >= 0; i--) {
@@ -203,34 +232,38 @@ class Game extends Component<GameProps, State> {
       }
       return row;
     });
-    return { board: newBoard, placedTiles: swipedLeft.placedTiles };
+    return { board: newBoard, placedTiles: swipedLeft.placedTiles, largestTile: swipedLeft.largestTile };
   }
   handleKeyPress = (event: any) => {
     let newState = true;
-    const events = ["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"];
-    if (!events.includes(event.key)) return;
+    const events = [ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ARROW_DOWN];
+    if (!events.includes(event.key) || this.state.message) return;
     this.setState((prevState) => {
-      const { board, placedTiles } = prevState;
+      const { board, placedTiles, nextLevel } = prevState;
       const clearedBoard = this.clearAnimationProperties(board);
       switch (event.key) {
-        case "ArrowLeft": {
+        case ARROW_LEFT: {
           const result = this.swipeLeft(board, placedTiles);
-          return { ...prevState, board: result.board, placedTiles: result.placedTiles };
+          const message = this.checkScore(result.largestTile, nextLevel);
+          return { ...prevState, board: result.board, placedTiles: result.placedTiles, message };
         }
-        case "ArrowRight":
+        case ARROW_RIGHT:
           const result = this.swipeRight(board, placedTiles);
-          return { ...prevState, board: result.board, placedTiles: result.placedTiles }
-        case "ArrowUp": {
+          const message = this.checkScore(result.largestTile, nextLevel);
+          return { ...prevState, board: result.board, placedTiles: result.placedTiles, message }
+        case ARROW_UP: {
           const transposedBoard = this.transposeMatrix(clearedBoard);
           const result = this.swipeLeft(transposedBoard, placedTiles);
           const newBoard = this.transposeMatrix(result.board);
-          return { ...prevState, board: newBoard, placedTiles: result.placedTiles };
+          const message = this.checkScore(result.largestTile, nextLevel);
+          return { ...prevState, board: newBoard, placedTiles: result.placedTiles, message };
         }
-        case "ArrowDown": {
+        case ARROW_DOWN: {
           const transposedBoard = this.transposeMatrix(clearedBoard);
           const result = this.swipeRight(transposedBoard, placedTiles);
           const transposedNewBoard = this.transposeMatrix(result.board);
-          return { ...prevState, board: transposedNewBoard, placedTiles: result.placedTiles };
+          const message = this.checkScore(result.largestTile, nextLevel);
+          return { ...prevState, board: transposedNewBoard, placedTiles: result.placedTiles, message };
         }
         default:
           newState = false;
@@ -241,38 +274,55 @@ class Game extends Component<GameProps, State> {
       this.placeNewTiles(1);
     }
   }
+  handleTouchStart = (event: TouchEvent) => {
+    console.log(event.touches[0].clientX, event.touches[0].clientY);
+  }
+  handleTouchEnd = (event: TouchEvent) => {
+    console.log(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
+  }
   componentDidMount() {
     this.placeNewTiles(2);
     window.addEventListener("keydown", this.handleKeyPress);
+    window.addEventListener("touchstart", this.handleTouchStart);
+    const l = window.addEventListener("touchend", this.handleTouchEnd);
   }
   componentWillUnmount() {
     this.setState(this.initState);
     window.removeEventListener('keydown', this.handleKeyPress);
+    window.removeEventListener('touchstart', this.handleTouchStart);
+    window.removeEventListener("touchend", this.handleTouchEnd);
   }
   restartGame = () => {
     this.setState(this.initState);
     this.placeNewTiles(2);
   }
   render = () => {
-    const key = 0;
+    const { message } = this.state;
     return (
       <div className='container'>
         <div>
           <header className="header">
             <h1>2048</h1>
             <button
-              className='restart-button'
+              className='game-button'
               onClick={this.restartGame}
             >
               New Game
             </button>
           </header>
           <div className="game-container">
+            {message ? (<MessageComponent
+              messageText={message.messageText}
+              buttonLabel={message.buttonLabel}
+              onClick={message.onClick}
+            />) : null
+            }
             <div className="game-grid">
+
               {
                 this.state.board.map((arr: Tile[], x: number) => {
                   return arr.map((tile: Tile, y: number) => {
-                    const { color, background } = this.colorPalette[tile.value];
+                    const { color, background } = COLOR_PALETTE[tile.value];
                     const point = this.calculateMovingCoordinates(tile.fromPos, { x, y });
                     return (
                       <div key={nextId()} className='grid-cell'>
