@@ -2,13 +2,16 @@ import { Component } from 'react';
 import './Game.css';
 import Tile from './Tile';
 import nextId from 'react-id-generator';
-import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, COLOR_PALETTE, MAX_LEVEL } from './constants';
+import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, COLOR_PALETTE, LARGE_CELL_GAP, LARGE_CELL_WIDTH, MAX_LEVEL, SCREEN_BREAKPOINT, SMALL_CELL_GAP, SMALL_CELL_WIDTH } from './constants';
 import MessageComponent, { Message } from './GameMessage';
 import TileComponent from './Tile';
+
+// Pixel coordinates
 export type Point = {
   x: number;
   y: number;
 }
+// Grid coordinates
 type Cell = {
   r: number;
   c: number;
@@ -132,14 +135,16 @@ class Game extends Component<GameProps, State> {
   }
   //Calculate the distance to move tile from old position to the new position
   calculateMovingPixels = (from: Cell | null, to: Cell): Point => {
-    const cellWidth = 106.25;
-    const cellPadding = 15;
+    const { innerWidth } = window;
+    const cellWidth = innerWidth <= SCREEN_BREAKPOINT ? SMALL_CELL_WIDTH : LARGE_CELL_WIDTH;
+    const cellPadding = innerWidth <= SCREEN_BREAKPOINT ? SMALL_CELL_GAP : LARGE_CELL_GAP;
     const step = cellWidth + cellPadding;
     let x = 0;
     let y = 0;
     if (!from) {
       return { x, y }
     }
+    // number of cells between from cell to destination cell * cell size
     if (from.r === to.r) {
       x = (from.c - to.c) * step;
     }
@@ -186,7 +191,6 @@ class Game extends Component<GameProps, State> {
 
   swipeLeft = (board: Tile[][], placedTiles: number) => {
     const n = board.length;
-    let tiles = placedTiles;
     let largestTile = 0;
     const newBoard = this.copyBoard(board).map((row) => {
       let count = 0;
@@ -201,7 +205,7 @@ class Game extends Component<GameProps, State> {
               oldPos: row[c].oldPos
             }
             largestTile = Math.max(largestTile, row[count].value);
-            tiles--;
+            placedTiles--;
             count++;
             row[c] = this.emptyTile;
           } else {
@@ -218,65 +222,75 @@ class Game extends Component<GameProps, State> {
       }
       return row;
     });
-    return { board: newBoard, placedTiles: tiles, largestTile };
+    return { board: newBoard, placedTiles, largestTile };
   }
   swipeRight = (board: Tile[][], placedTiles: number) => {
     const reversedBoard = this.copyBoard(board).map((row) => {
       return row.reverse();
     });
-    const swipedLeft = this.swipeLeft(reversedBoard, placedTiles);
-    const newBoard = swipedLeft.board.map((row) => {
+    const result = this.swipeLeft(reversedBoard, placedTiles);
+    const newBoard = result.board.map((row) => {
       return row.reverse();
     });
-    return { board: newBoard, placedTiles: swipedLeft.placedTiles, largestTile: swipedLeft.largestTile };
+    return { ...result, board: newBoard };
   }
-  handleKeyPress = (event: any) => {
-    const events = [ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ARROW_DOWN];
-    if (!events.includes(event.key) || this.state.message) return;
-    this.updateGameBoard(event.key);
+  swipeUp = (board: Tile[][], placedTiles: number) => {
+    const transposedBoard = this.transposeMatrix(board);
+    const result = this.swipeLeft(transposedBoard, placedTiles);
+    const newBoard = this.transposeMatrix(result.board);
+    return { ...result, board: newBoard };
   }
+  swipeDown = (board: Tile[][], placedTiles: number) => {
+    const transposedBoard = this.transposeMatrix(board);
+    const result = this.swipeRight(transposedBoard, placedTiles);
+    const newBoard = this.transposeMatrix(result.board);
+    return { ...result, board: newBoard };
+  }
+
   updateGameBoard = (direction: string) => {
     let newState = true;
     this.setState((prevState) => {
-      const { board, placedTiles, nextLevel } = prevState;
-      const clearedBoard = this.clearAnimationProperties(board);
+      let { board, placedTiles, nextLevel } = prevState;
+      board = this.clearAnimationProperties(board);
+      let result;
       switch (direction) {
-        case ARROW_LEFT: {
-          const result = this.swipeLeft(board, placedTiles);
-          const message = this.checkScore(result.largestTile, nextLevel);
-          return { ...prevState, board: result.board, placedTiles: result.placedTiles, message };
-        }
+        case ARROW_LEFT:
+          result = this.swipeLeft(board, placedTiles);
+          break;
         case ARROW_RIGHT:
-          const result = this.swipeRight(board, placedTiles);
-          const message = this.checkScore(result.largestTile, nextLevel);
-          return { ...prevState, board: result.board, placedTiles: result.placedTiles, message }
-        case ARROW_UP: {
-          const transposedBoard = this.transposeMatrix(clearedBoard);
-          const result = this.swipeLeft(transposedBoard, placedTiles);
-          const newBoard = this.transposeMatrix(result.board);
-          const message = this.checkScore(result.largestTile, nextLevel);
-          return { ...prevState, board: newBoard, placedTiles: result.placedTiles, message };
-        }
-        case ARROW_DOWN: {
-          const transposedBoard = this.transposeMatrix(clearedBoard);
-          const result = this.swipeRight(transposedBoard, placedTiles);
-          const transposedNewBoard = this.transposeMatrix(result.board);
-          const message = this.checkScore(result.largestTile, nextLevel);
-          return { ...prevState, board: transposedNewBoard, placedTiles: result.placedTiles, message };
-        }
+          result = this.swipeRight(board, placedTiles);
+          break;
+        case ARROW_UP:
+          result = this.swipeUp(board, placedTiles)
+          break;
+        case ARROW_DOWN:
+          result = this.swipeDown(board, placedTiles);
+          break;
         default:
           newState = false;
           return prevState;
       }
+
+      const { largestTile, ...rest } = result;
+      const message = this.checkScore(largestTile, nextLevel);
+      return { ...prevState, ...rest, message };
     });
     if (newState) {
       this.placeNewTiles(1);
     }
   }
+
+  handleKeyPress = (event: any) => {
+    const events = [ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ARROW_DOWN];
+    if (!events.includes(event.key) || this.state.message) return;
+    this.updateGameBoard(event.key);
+  }
+
   handleTouchStart = (event: TouchEvent) => {
     this.touchStartPoint = { x: event.touches[0].clientX, y: event.touches[0].clientY };
     this.touchEndPoint = null;
   }
+
   handleTouchEnd = (event: TouchEvent) => {
     if (this.state.message) return;
     const minDistance = 50;
@@ -349,7 +363,12 @@ class Game extends Component<GameProps, State> {
                     const point = this.calculateMovingPixels(tile.oldPos, { r, c });
                     return (
                       <div key={nextId()} className="grid-cell">
-                        <TileComponent newTile={tile.newTile} mergedTile={tile.merged} textColor={color} background={background} transform={point}>
+                        <TileComponent
+                          newTile={tile.newTile}
+                          mergedTile={tile.merged}
+                          textColor={color}
+                          background={background}
+                          transform={point}>
                           {tile.value ? String(tile.value) : null}
                         </TileComponent>
                       </div>

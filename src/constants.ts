@@ -26,3 +26,9 @@ export const ARROW_UP = "ArrowUp";
 export const ARROW_DOWN = "ArrowDown";
 
 export const MAX_LEVEL = 2048;
+
+export const SMALL_CELL_WIDTH = 73;
+export const LARGE_CELL_WIDTH = 106.25;
+export const SCREEN_BREAKPOINT = 520;
+export const SMALL_CELL_GAP = 5;
+export const LARGE_CELL_GAP = 15;
