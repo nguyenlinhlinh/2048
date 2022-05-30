@@ -9,10 +9,14 @@ export type Point = {
   x: number;
   y: number;
 }
+type Cell = {
+  r: number;
+  c: number;
+}
 type GameProps = {}
 type Tile = {
   value: number,
-  oldPos: Point | null,
+  oldPos: Cell | null,
   merged: boolean,
   newTile: boolean
 }
@@ -24,7 +28,6 @@ type State = {
 };
 
 class Game extends Component<GameProps, State> {
-  private startValues = [2, 4];
   private N = 4;
   private emptyTile = {
     value: 0,
@@ -53,9 +56,9 @@ class Game extends Component<GameProps, State> {
   private touchEndPoint: Point | null = null;
   createInitBoard = () => {
     const m: Tile[][] = Array.from({ length: this.N }).map(() => Array.from<Tile>({ length: this.N }));
-    for (let x = 0; x < this.N; x++) {
-      for (let y = 0; y < this.N; y++) {
-        m[x][y] = this.emptyTile
+    for (let r = 0; r < this.N; r++) {
+      for (let c = 0; c < this.N; c++) {
+        m[r][c] = this.emptyTile;
       }
     }
     return m;
@@ -67,54 +70,52 @@ class Game extends Component<GameProps, State> {
   copyBoard = (board: Tile[][]) => {
     return board.map((row) => {
       return row.slice();
-    })
+    });
   }
   placeNewTiles = (nbrOfnewTiles: number) => {
     this.setState((prevState) => {
-      const { board, placedTiles } = prevState;
+      let { board, placedTiles } = prevState;
       const n = this.N;
-      const values = this.startValues;
-      let tiles = placedTiles;
       const newBoard = this.copyBoard(board);
       for (let i = 0; i < nbrOfnewTiles; i++) {
-        if (tiles >= n * n) {
+        if (placedTiles >= n * n) {
           break;
         }
-        const value = values[this.getRandomValue(0, 2)];
-        let x = this.getRandomValue(0, n);
-        let y = this.getRandomValue(0, n);
-        while (newBoard[x][y].value !== 0) {
-          x = this.getRandomValue(0, n);
-          y = this.getRandomValue(0, n);
-        }
-        newBoard[x][y] = {
+        const value = Math.random() < 0.5 ? 2 : 4;
+        let r: number;
+        let c: number;
+        do {
+          r = this.getRandomValue(0, n);
+          c = this.getRandomValue(0, n);
+        } while (newBoard[r][c].value !== 0);
+        newBoard[r][c] = {
           ...this.emptyTile,
           value,
           newTile: true,
-          oldPos: { x, y }
+          oldPos: { r, c }
         };
-        tiles++;
+        placedTiles++;
       }
       let message = prevState.message;
       // Win message has higher priority
-      if (tiles >= this.N * 4 && !prevState.message && this.isGameOver(newBoard)) {
+      if (placedTiles >= n * n && !prevState.message && this.isGameOver(newBoard)) {
         message = this.gameOverMessage;
       }
-      return { ...prevState, board: newBoard, placedTiles: tiles, message };
+      return { ...prevState, board: newBoard, placedTiles, message };
     });
   }
   isGameOver = (board: Tile[][]) => {
     const n = board.length;
-    for (let x = 0; x < board.length; x++) {
-      for (let y = 0; y < board.length; y++) {
-        const val = board[x][y].value;
+    for (let r = 0; r < board.length; r++) {
+      for (let c = 0; c < board.length; c++) {
+        const val = board[r][c].value;
         if (val === 0) {
           return false;
         };
-        if (x + 1 < n && board[x + 1][y].value === val) {
+        if (r + 1 < n && board[r + 1][c].value === val) {
           return false;
         }
-        if (y + 1 < n && board[x][y + 1].value === val)
+        if (c + 1 < n && board[r][c + 1].value === val)
           return false
       }
     }
@@ -130,7 +131,7 @@ class Game extends Component<GameProps, State> {
     return newMatrix;
   }
   //Calculate the distance to move tile from old position to the new position
-  calculateMovingPixels = (from: Point | null, to: Point): Point => {
+  calculateMovingPixels = (from: Cell | null, to: Cell): Point => {
     const cellWidth = 106.25;
     const cellPadding = 15;
     const step = cellWidth + cellPadding;
@@ -139,23 +140,23 @@ class Game extends Component<GameProps, State> {
     if (!from) {
       return { x, y }
     }
-    if (from.x === to.x) {
-      x = (from.y - to.y) * step;
+    if (from.r === to.r) {
+      x = (from.c - to.c) * step;
     }
-    if (from.y === to.y) {
-      y = (from.x - to.x) * step;
+    if (from.c === to.c) {
+      y = (from.r - to.r) * step;
     }
     return { x, y };
   }
   clearAnimationProperties = (board: Tile[][]): Tile[][] => {
     const newBoard = this.copyBoard(board);
     const n = this.N;
-    for (let x = 0; x < n; x++) {
-      for (let y = 0; y < n; y++) {
-        const tile = newBoard[x][y];
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const tile = newBoard[r][c];
         tile.newTile = false;
         tile.merged = false;
-        tile.oldPos = tile.value === 0 ? null : { x, y };
+        tile.oldPos = tile.value === 0 ? null : { r, c };
       }
     }
     return newBoard;
@@ -187,36 +188,33 @@ class Game extends Component<GameProps, State> {
     const n = board.length;
     let tiles = placedTiles;
     let largestTile = 0;
-    const newBoard = this.copyBoard(board).map((row, x) => {
+    const newBoard = this.copyBoard(board).map((row) => {
       let count = 0;
-      for (let y = 1; y < n; y++) {
-        if (row[y].value === 0) continue;
+      for (let c = 1; c < n; c++) {
+        if (row[c].value === 0) continue;
         if (row[count].value !== 0) {
-          if (row[count].value === row[y].value) {
+          if (row[count].value === row[c].value) {
             row[count] = {
               newTile: false,
-              value: row[y].value * 2,
+              value: row[c].value * 2,
               merged: true,
-              oldPos: row[y].oldPos
+              oldPos: row[c].oldPos
             }
             largestTile = Math.max(largestTile, row[count].value);
             tiles--;
             count++;
-            row[y] = this.emptyTile;
+            row[c] = this.emptyTile;
           } else {
             count++;
-            row[count] = { ...row[y] };
-            if (count !== y) {
-              row[y] = this.emptyTile;
+            row[count] = { ...row[c] };
+            if (count !== c) {
+              row[c] = this.emptyTile;
             }
           }
         } else {
-          row[count] = { ...row[y] };
-          row[y] = this.emptyTile;
+          row[count] = { ...row[c] };
+          row[c] = this.emptyTile;
         }
-      }
-      for (let i = count + 1; i < n; i++) {
-        row[i].value = 0;
       }
       return row;
     });
@@ -225,11 +223,11 @@ class Game extends Component<GameProps, State> {
   swipeRight = (board: Tile[][], placedTiles: number) => {
     const reversedBoard = this.copyBoard(board).map((row) => {
       return row.reverse();
-    })
+    });
     const swipedLeft = this.swipeLeft(reversedBoard, placedTiles);
     const newBoard = swipedLeft.board.map((row) => {
       return row.reverse();
-    })
+    });
     return { board: newBoard, placedTiles: swipedLeft.placedTiles, largestTile: swipedLeft.largestTile };
   }
   handleKeyPress = (event: any) => {
@@ -345,12 +343,12 @@ class Game extends Component<GameProps, State> {
             <div className="game-grid">
 
               {
-                this.state.board.map((arr: Tile[], x: number) => {
-                  return arr.map((tile: Tile, y: number) => {
+                this.state.board.map((arr: Tile[], r: number) => {
+                  return arr.map((tile: Tile, c: number) => {
                     const { color, background } = COLOR_PALETTE[tile.value];
-                    const point = this.calculateMovingPixels(tile.oldPos, { x, y });
+                    const point = this.calculateMovingPixels(tile.oldPos, { r, c });
                     return (
-                      <div key={nextId()} className={`grid-cell ${tile.merged ? " merged-tile" : ""}`}>
+                      <div key={nextId()} className="grid-cell">
                         <TileComponent newTile={tile.newTile} mergedTile={tile.merged} textColor={color} background={background} transform={point}>
                           {tile.value ? String(tile.value) : null}
                         </TileComponent>

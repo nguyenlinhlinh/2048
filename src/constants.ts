@@ -11,12 +11,12 @@ export const COLOR_PALETTE: { [key: number]: { background: string, color: string
   512: { background: '#EDC850', color: '#f9f6f2' },
   1024: { background: '#EDC53F', color: '#f9f6f2' },
   2048: { background: '#EDC22E', color: '#f9f6f2' },
-  4096: { background: '#3E3933', color: '#f9f6f2' },
-  8192: { background: '#F47C7C', color: '#f9f6f2' },
-  16384: { background: '#4C5B61', color: '#f9f6f2' },
-  32768: { background: '#9772FB', color: '#f9f6f2' },
-  65536: { background: '#E9EFC0', color: '#f9f6f2' },
-  131072: { background: '#0AA1DD', color: '#f9f6f2' },
+  // 4096: { background: '#3E3933', color: '#f9f6f2' },
+  // 8192: { background: '#F47C7C', color: '#f9f6f2' },
+  // 16384: { background: '#4C5B61', color: '#f9f6f2' },
+  // 32768: { background: '#9772FB', color: '#f9f6f2' },
+  // 65536: { background: '#E9EFC0', color: '#f9f6f2' },
+  // 131072: { background: '#0AA1DD', color: '#f9f6f2' },
 }
 
 
@@ -25,4 +25,4 @@ export const ARROW_RIGHT = "ArrowRight";
 export const ARROW_UP = "ArrowUp";
 export const ARROW_DOWN = "ArrowDown";
 
-export const MAX_LEVEL = 131072;
+export const MAX_LEVEL = 2048;

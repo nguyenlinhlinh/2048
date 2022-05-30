@@ -32,9 +32,9 @@
 }
 
 .new-tile {
-  -webkit-animation: appear 300ms ease 100ms;
-  -moz-animation: appear 300ms ease 100ms;
-  animation: appear 300ms ease 100ms;
+  -webkit-animation: appear 300ms ease 200ms;
+  -moz-animation: appear 300ms ease 200ms;
+  animation: appear 300ms ease 200ms;
   -webkit-animation-fill-mode: backwards;
   -moz-animation-fill-mode: backwards;
   animation-fill-mode: backwards;

@@ -17,7 +17,7 @@ const TileComponent = (props: Props) => {
   }
   return (
     <div
-      className={`tile${newTile ? " new-tile" : ""}`}
+      className={`tile${newTile ? " new-tile" : ""}${mergedTile ? " merged-tile" : ""}`}
       style={{
         color: textColor,
         background: background,
