@@ -1,15 +1,34 @@
 .tile {
   --x-from: 0px;
   --y-from: 0px;
+  --line-height: 106.25px;
   display: flex;
   justify-content: center;
   align-items: center;
   width: var(--cell-width);
   height: var(--cell-width);
-  font-size: 55px;
+  font-size: var(--tile-font-size);
   font-weight: bold;
   border-radius: 6px;
   animation: slide 400ms forwards;
+}
+
+.tile-text {
+  width: var(--cell-width);
+  height: var(--cell-width);
+  text-align: center;
+  line-height: var(--line-height);
+}
+
+@media screen and (max-width: 520px) {
+  .tile {
+    --cell-width: 73px;
+    --font-size: 20px;
+  }
+
+  .tile-text {
+    --line-height: 70px;
+  }
 }
 
 .new-tile {
@@ -39,34 +58,26 @@
   }
 }
 
-.tile-text {
-  width: var(--cell-width);
-  height: var(--cell-width);
-  text-align: center;
-  line-height: 106.25px;
-}
+
 
 .merged-tile {
   z-index: 20;
-  -webkit-animation: pop 200ms ease 300ms;
-  -moz-animation: pop 200ms ease 300ms;
-  animation: pop 200ms ease 300ms;
+  -webkit-animation: slide 400ms forwards, pop 300ms ease 300ms backwards;
+  -moz-animation: slide 400ms forwards, pop 300ms ease 300ms backwards;
+  animation: slide 400ms forwards, pop 300ms ease 300ms backwards;
   animation-fill-mode: none;
-  -webkit-animation-fill-mode: backwards;
-  -moz-animation-fill-mode: backwards;
-  animation-fill-mode: backwards;
 }
 
 @keyframes pop {
   0% {
-    -webkit-transform: scale(0);
-    -moz-transform: scale(0);
-    -ms-transform: scale(0);
-    transform: scale(0);
+    -webkit-transform: scale(1);
+    -moz-transform: scale(1);
+    -ms-transform: scale(1);
+    transform: scale(1);
   }
 
   50% {
-    -webkit-transform: scale(1.2);
+    -webkit-transform: scale(1.1);
     -moz-transform: scale(1.2);
     -ms-transform: scale(1.2);
     transform: scale(1.2);

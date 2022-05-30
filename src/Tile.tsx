@@ -8,7 +8,7 @@ type Props = {
   mergedTile: boolean,
   transform: Point
 };
-const Tile = (props: Props) => {
+const TileComponent = (props: Props) => {
   const { textColor, background, newTile, mergedTile, children, transform } = props;
   const { x, y } = transform;
   const data = {
@@ -17,17 +17,17 @@ const Tile = (props: Props) => {
   }
   return (
     <div
-      className={`tile ${newTile ? "new-tile" : ""} `}
+      className={`tile${newTile ? " new-tile" : ""}`}
       style={{
         color: textColor,
         background: background,
         ...data
       }}
     >
-      <div className={`tile-text ${mergedTile ? "merged-tile" : ""}`}>
+      <div className={`tile-text`}>
         {children}
       </div>
     </div>
   );
 };
-export default Tile;
+export default TileComponent;
