@@ -4,6 +4,7 @@ import Tile from './Tile';
 import nextId from 'react-id-generator';
 import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, COLOR_PALETTE, MAX_LEVEL } from './constants';
 import MessageComponent, { Message } from './GameMessage';
+import TileComponent from './Tile';
 export type Point = {
   x: number;
   y: number;
@@ -11,7 +12,7 @@ export type Point = {
 type GameProps = {}
 type Tile = {
   value: number,
-  fromPos: Point | null,
+  oldPos: Point | null,
   merged: boolean,
   newTile: boolean
 }
@@ -27,7 +28,7 @@ class Game extends Component<GameProps, State> {
   private N = 4;
   private emptyTile = {
     value: 0,
-    fromPos: null,
+    oldPos: null,
     merged: false,
     newTile: false
   }
@@ -48,6 +49,8 @@ class Game extends Component<GameProps, State> {
       buttonLabel: "Try again"
     }
   }
+  private touchStartPoint: Point | null = null;
+  private touchEndPoint: Point | null = null;
   createInitBoard = () => {
     const m: Tile[][] = Array.from({ length: this.N }).map(() => Array.from<Tile>({ length: this.N }));
     for (let x = 0; x < this.N; x++) {
@@ -88,7 +91,7 @@ class Game extends Component<GameProps, State> {
           ...this.emptyTile,
           value,
           newTile: true,
-          fromPos: { x, y }
+          oldPos: { x, y }
         };
         tiles++;
       }
@@ -126,7 +129,7 @@ class Game extends Component<GameProps, State> {
     }
     return newMatrix;
   }
-
+  //Calculate the distance to move tile from old position to the new position
   calculateMovingPixels = (from: Point | null, to: Point): Point => {
     const cellWidth = 106.25;
     const cellPadding = 15;
@@ -152,7 +155,7 @@ class Game extends Component<GameProps, State> {
         const tile = newBoard[x][y];
         tile.newTile = false;
         tile.merged = false;
-        tile.fromPos = tile.value === 0 ? null : { x, y };
+        tile.oldPos = tile.value === 0 ? null : { x, y };
       }
     }
     return newBoard;
@@ -169,7 +172,8 @@ class Game extends Component<GameProps, State> {
       return {
         onClick: () => {
           this.setState((prevState) => {
-            return { ...prevState, message: null, nextLevel: nextLevel * 2 };
+            const clearedBoard = this.clearAnimationProperties(prevState.board);
+            return { ...prevState, board: clearedBoard, message: null, nextLevel: nextLevel * 2 };
           });
         },
         messageText: `New milestone reached! ${nextLevel}`,
@@ -180,21 +184,20 @@ class Game extends Component<GameProps, State> {
   }
 
   swipeLeft = (board: Tile[][], placedTiles: number) => {
-    const n = this.N;
+    const n = board.length;
     let tiles = placedTiles;
     let largestTile = 0;
     const newBoard = this.copyBoard(board).map((row, x) => {
-      const n = row.length;
       let count = 0;
       for (let y = 1; y < n; y++) {
         if (row[y].value === 0) continue;
-        if (row[count].value != 0) {
+        if (row[count].value !== 0) {
           if (row[count].value === row[y].value) {
             row[count] = {
               newTile: false,
               value: row[y].value * 2,
               merged: true,
-              fromPos: row[y].fromPos
+              oldPos: row[y].oldPos
             }
             largestTile = Math.max(largestTile, row[count].value);
             tiles--;
@@ -230,13 +233,16 @@ class Game extends Component<GameProps, State> {
     return { board: newBoard, placedTiles: swipedLeft.placedTiles, largestTile: swipedLeft.largestTile };
   }
   handleKeyPress = (event: any) => {
-    let newState = true;
     const events = [ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ARROW_DOWN];
     if (!events.includes(event.key) || this.state.message) return;
+    this.updateGameBoard(event.key);
+  }
+  updateGameBoard = (direction: string) => {
+    let newState = true;
     this.setState((prevState) => {
       const { board, placedTiles, nextLevel } = prevState;
       const clearedBoard = this.clearAnimationProperties(board);
-      switch (event.key) {
+      switch (direction) {
         case ARROW_LEFT: {
           const result = this.swipeLeft(board, placedTiles);
           const message = this.checkScore(result.largestTile, nextLevel);
@@ -270,16 +276,40 @@ class Game extends Component<GameProps, State> {
     }
   }
   handleTouchStart = (event: TouchEvent) => {
-    console.log(event.touches[0].clientX, event.touches[0].clientY);
+    this.touchStartPoint = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    this.touchEndPoint = null;
   }
   handleTouchEnd = (event: TouchEvent) => {
-    console.log(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
+    if (this.state.message) return;
+    const minDistance = 50;
+    this.touchEndPoint = { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY }
+    if (!this.touchStartPoint || !this.touchEndPoint) return;
+    const signedDeltaX = this.touchEndPoint.x - this.touchStartPoint.x;
+    const signedDeltaY = this.touchEndPoint.y - this.touchStartPoint.y;
+    const deltaX = Math.abs(signedDeltaX);
+    const deltaY = Math.abs(signedDeltaY);
+    if (deltaX < minDistance && deltaY < minDistance) return;
+    //Horizontal swipe
+    if (deltaX > deltaY) {
+      if (signedDeltaX < 0) {
+        this.updateGameBoard(ARROW_LEFT);
+      } else {
+        this.updateGameBoard(ARROW_RIGHT);
+      }
+      // Vertical swipe
+    } else {
+      if (signedDeltaY < 0) {
+        this.updateGameBoard(ARROW_UP);
+      } else {
+        this.updateGameBoard(ARROW_DOWN);
+      }
+    }
   }
   componentDidMount() {
     this.placeNewTiles(2);
     window.addEventListener("keydown", this.handleKeyPress);
     window.addEventListener("touchstart", this.handleTouchStart);
-    const l = window.addEventListener("touchend", this.handleTouchEnd);
+    window.addEventListener("touchend", this.handleTouchEnd);
   }
   componentWillUnmount() {
     this.setState(this.initState);
@@ -318,12 +348,12 @@ class Game extends Component<GameProps, State> {
                 this.state.board.map((arr: Tile[], x: number) => {
                   return arr.map((tile: Tile, y: number) => {
                     const { color, background } = COLOR_PALETTE[tile.value];
-                    const point = this.calculateMovingPixels(tile.fromPos, { x, y });
+                    const point = this.calculateMovingPixels(tile.oldPos, { x, y });
                     return (
-                      <div key={nextId()} className='grid-cell'>
-                        <Tile newTile={tile.newTile} mergedTile={tile.merged} textColor={color} background={background} transform={point}>
+                      <div key={nextId()} className={`grid-cell ${tile.merged ? " merged-tile" : ""}`}>
+                        <TileComponent newTile={tile.newTile} mergedTile={tile.merged} textColor={color} background={background} transform={point}>
                           {tile.value ? String(tile.value) : null}
-                        </Tile>
+                        </TileComponent>
                       </div>
                     )
                   });
