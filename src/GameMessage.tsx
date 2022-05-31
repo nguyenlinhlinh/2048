@@ -1,3 +1,4 @@
+import "./GameMessage.css";
 type Props = {
   onClick: () => void;
   messageText: string;

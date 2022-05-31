@@ -1,7 +1,6 @@
 .tile {
   --x-from: 0px;
   --y-from: 0px;
-  --line-height: 106.25px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -10,14 +9,16 @@
   font-size: var(--tile-font-size);
   font-weight: bold;
   border-radius: 6px;
-  animation: slide 400ms forwards;
+  animation: slide 300ms forwards;
 }
 
-.tile-text {
-  width: var(--cell-width);
-  height: var(--cell-width);
+.tile-value {
   text-align: center;
-  line-height: var(--line-height);
+  line-height: var(--cell-width);
+}
+
+.large-tile-value {
+  --tile-font-size: 45px;
 }
 
 @media screen and (max-width: 520px) {
@@ -26,8 +27,12 @@
     --font-size: 20px;
   }
 
-  .tile-text {
-    --line-height: 70px;
+  .tile-value {
+    --cell-width: 70px;
+  }
+
+  .large-tile-value {
+    --tile-font-size: 30px;
   }
 }
 
@@ -93,10 +98,16 @@
 
 @keyframes slide {
   from {
+    -webkit-transform: translate(var(--x-from), var(--y-from));
+    -moz-transform: translate(var(--x-from), var(--y-from));
+    -ms-transform: translate(var(--x-from), var(--y-from));
     transform: translate(var(--x-from), var(--y-from));
   }
 
   to {
+    -webkit-transform: translate(0px, 0px);
+    -moz-transform: translate(0px, 0px);
+    -ms-transform: translate(0px, 0px);
     transform: translate(0px, 0px);
   }
 }

@@ -1,8 +1,19 @@
 import { Component } from 'react';
 import './Game.css';
-import Tile from './Tile';
 import nextId from 'react-id-generator';
-import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, COLOR_PALETTE, LARGE_CELL_GAP, LARGE_CELL_WIDTH, MAX_LEVEL, SCREEN_BREAKPOINT, SMALL_CELL_GAP, SMALL_CELL_WIDTH } from './constants';
+import {
+  ARROW_DOWN,
+  ARROW_LEFT,
+  ARROW_RIGHT,
+  ARROW_UP,
+  COLOR_PALETTE,
+  LARGE_CELL_GAP,
+  LARGE_CELL_WIDTH,
+  MAX_LEVEL,
+  SCREEN_BREAKPOINT,
+  SMALL_CELL_GAP,
+  SMALL_CELL_WIDTH
+} from './constants';
 import MessageComponent, { Message } from './GameMessage';
 import TileComponent from './Tile';
 
@@ -361,15 +372,17 @@ class Game extends Component<GameProps, State> {
                   return arr.map((tile: Tile, c: number) => {
                     const { color, background } = COLOR_PALETTE[tile.value];
                     const point = this.calculateMovingPixels(tile.oldPos, { r, c });
+                    const value = tile.value ? String(tile.value) : "";
                     return (
                       <div key={nextId()} className="grid-cell">
                         <TileComponent
+                          largeTile={value.length > 3}
                           newTile={tile.newTile}
                           mergedTile={tile.merged}
                           textColor={color}
                           background={background}
                           transform={point}>
-                          {tile.value ? String(tile.value) : null}
+                          {value}
                         </TileComponent>
                       </div>
                     )
